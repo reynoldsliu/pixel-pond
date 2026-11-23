@@ -1,0 +1,14 @@
+{
+  "name": "pixel-pond",
+  "version": "0.1.0",
+  "private": true,
+  "description": "像素池塘動態桌布產生器（純靜態網頁、ES modules，無需建置）",
+  "scripts": {
+    "dev": "python3 -m http.server 5173",
+    "test": "node test.js",
+    "assets": "node tools/assets.js",
+    "assets:builtin": "node tools/assets.js builtin",
+    "pack": "node tools/pack.js"
+  },
+  "type": "module"
+}

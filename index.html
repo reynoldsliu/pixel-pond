@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Pixel Pond 動態桌布</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main><canvas id="view" aria-label="像素池塘動畫"></canvas>
+    <div id="photoBar" hidden>正在顯示照片：<span id="photoName"></span><button id="photoOff">✕ 取消照片</button></div></main>
+
+  <aside id="panel">
+    <header>
+      <h1>像素池塘 · 動態桌布 <button id="lang" class="lang" aria-label="語言"></button></h1>
+      <p class="hint">用一句話、滑桿，或一張風景照，做出會動的像素桌布。</p>
+    </header>
+
+    <section class="top">
+      <textarea id="prompt" rows="2" maxlength="200" aria-label="場景描述" placeholder="用一句話描述，例：起風的秋天黃昏，荷葉很多的大池塘"></textarea>
+      <div class="row">
+        <button id="applyPrompt" class="primary">套用描述</button>
+        <button id="dice" title="同樣設定、換一個隨機場景">🎲 換一個場景</button>
+      </div>
+      <p id="understood" class="hint"></p>
+    </section>
+
+    <details open>
+      <summary>場景</summary>
+      <label>配色 <select id="palette" aria-label="配色預設"></select></label>
+      <div id="colors"></div>
+      <div data-sliders="scene"></div>
+      <h3>地標</h3>
+      <div id="props" class="chips"></div>
+      <label>場景編號（seed）<input id="seed" type="number"></label>
+    </details>
+
+    <details open>
+      <summary>地區與生態（現實同步）</summary>
+      <label>水域 <select id="habitat" data-key="habitat">
+        <option value="pond">池塘</option><option value="lake">大型湖泊</option><option value="coast">海岸</option><option value="ocean">海洋</option>
+      </select></label>
+      <div class="row">
+        <button id="geoMe">📍 用我的位置</button>
+        <select id="geoPreset" aria-label="常用地區"><option value="">常用地區…</option></select>
+      </div>
+      <div class="row">
+        <input id="geoQ" placeholder="搜尋城市（英文，例：Kyoto）" aria-label="搜尋城市">
+        <button id="geoSearch">搜尋</button>
+      </div>
+      <div id="geoResults" class="chips"></div>
+      <label>月份（季節） <select id="month" data-key="month"><option value="0">跟著當地現在</option></select></label>
+      <label><input type="checkbox" id="live"> 即時同步天氣（每 10 分鐘；下雨有漣漪、風大樹會搖）</label>
+      <div class="row">
+        <button id="geoVerify">用 GBIF 確認附近真的有</button>
+        <button id="geoClear">取消地點</button>
+      </div>
+      <p id="geoInfo" class="hint"></p>
+      <ul id="speciesList" class="species"></ul>
+      <p class="hint">選了地點後，物種、季節、配色（含清晨／黃昏／夜晚）都依當地決定。資料來自 Open-Meteo 與 GBIF，只在按按鈕或開即時同步時連線；位置只取到小數一位（約 10 公里）。</p>
+    </details>
+
+    <details>
+      <summary>水面與動態</summary>
+      <div data-sliders="water"></div>
+      <h3>六步打磨（關掉看差別）</h3>
+      <div id="steps"></div>
+      <button id="compare">對照：原始貼圖 ↔ 六步完成</button>
+    </details>
+
+    <details id="phSection">
+      <summary>風景照轉換</summary>
+      <p class="hint">把風景照轉成本產品的像素風格：減色、暗部偏藍綠亮部偏暖、往目前配色靠攏，並自動找出水面套上晃動、亮點與漣漪。</p>
+      <label>風景照<input type="file" id="phFile" accept="image/*"></label>
+      <label>顏色數 <output id="phColorsOut">20</output><input type="range" id="phColors" min="6" max="40" step="1" value="20"></label>
+      <label>配色風格強度 <output id="phStyleOut">0.35</output><input type="range" id="phStyle" min="0" max="1" step="0.05" value="0.35"></label>
+      <label>水面偵測靈敏度 <output id="phWaterOut">1</output><input type="range" id="phWater" min="0" max="2" step="0.1" value="1"></label>
+      <label>水線位置 <output id="phLineOut">自動</output><input type="range" id="phLine" min="0" max="0.95" step="0.01" value="0"></label>
+      <label><input type="checkbox" id="phDither" checked> 抖動</label>
+      <label><input type="checkbox" id="phClouds" checked> 雲飄動（找得到藍天上的雲才會動）</label>
+      <label><input type="checkbox" id="phSway" checked> 植物隨風擺動（跟著「風」滑桿）</label>
+      <p id="phInfo" class="hint"></p>
+      <button id="phClear" disabled>移除照片，回到程式場景</button>
+      <p class="hint">照片只存在這個分頁。桌布網址（Plash）不會帶著照片；請用「錄影片」輸出無縫循環的影片。</p>
+    </details>
+
+    <details>
+      <summary>素材圖與像素化</summary>
+      <label><input type="checkbox" id="art"> 使用素材圖取代程式畫的元素</label>
+      <label>素材 PNG（可多選、透明背景；依檔名分類，例如 flora-back-oak.png）<input type="file" id="upTrees" accept="image/png,image/webp,image/gif" multiple></label>
+      <label>地面底圖（選填）<input type="file" id="upGround" accept="image/*"></label>
+      <div data-sliders="art"></div>
+      <p id="artStatus" class="hint"></p>
+      <div class="row"><button id="artUndo" disabled>↶ 復原上一次加入</button><button id="artClear">清除上傳的素材</button></div>
+      <p class="hint">上傳的圖只存在這個分頁。要當桌布，請把圖放進 <code>assets/</code> 並執行 <code>npm run assets</code>（見 assets/README.md）。</p>
+
+      <h3 id="pxTool">圖片像素化</h3>
+      <p class="hint">任何圖片縮小、減色、抖動成像素畫；可去背後當成樹、石頭、地標放進場景。</p>
+      <label>圖片<input type="file" id="pxFile" accept="image/*"></label>
+      <label>寬度（像素） <output id="pxWOut">48</output><input type="range" id="pxW" min="8" max="320" step="1" value="48"></label>
+      <label>顏色數 <output id="pxCOut">16</output><input type="range" id="pxC" min="2" max="64" step="1" value="16"></label>
+      <label><input type="checkbox" id="pxDither" checked> 抖動（規則網點，漸層更細）</label>
+      <label><input type="checkbox" id="pxBg" checked> 去背（支援複雜背景；主體需大致在畫面中央）</label>
+      <label>外框留白（一定是背景的範圍） <output id="pxMOut">12%</output><input type="range" id="pxM" min="0.02" max="0.3" step="0.01" value="0.12"></label>
+      <label>放進場景當作
+        <select id="pxRole">
+          <option value="flora-back">後方樹木（會倒映）</option>
+          <option value="flora-ground">草地上的花草</option>
+          <option value="flora-shore">岸邊植物</option>
+          <option value="rock-shore">岸邊石頭</option>
+          <option value="rock-water">水中石頭</option>
+          <option value="prop-feature">地標</option>
+          <option value="terrain-ground">地面底圖（整張鋪滿地面）</option>
+        </select></label>
+      <canvas id="pxPreview" width="1" height="1"></canvas>
+      <p id="pxInfo" class="hint"></p>
+      <div class="row"><button id="pxAdd" disabled>加入場景</button><button id="pxAnimate" disabled>做成動態畫面</button><button id="pxSave" disabled>下載 PNG</button></div>
+    </details>
+
+    <details open>
+      <summary>輸出與桌布</summary>
+      <div data-sliders="out"></div>
+      <h3>設成 Mac 動態桌布</h3>
+      <input id="wpUrl" readonly aria-label="桌布網址">
+      <div class="row">
+        <button id="copy" class="primary">複製桌布網址</button>
+        <button id="openWp">全螢幕預覽</button>
+      </div>
+      <ol class="hint">
+        <li>安裝免費的 <b>Plash</b>（Mac App Store）。</li>
+        <li>Plash 選單 → Add Website → 貼上網址。</li>
+        <li>之後在這裡調整，重新複製網址即可。</li>
+      </ol>
+      <h3>匯出檔案</h3>
+      <div class="row">
+        <button id="png">存 PNG</button>
+        <label>秒數 <input id="recSec" type="number" value="10" min="2" max="60"></label>
+        <button id="rec">錄影片</button>
+      </div>
+    </details>
+
+    <button id="reset">重設全部</button>
+  </aside>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
